@@ -1,0 +1,23 @@
+
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kuiz BIG 5%</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-100 p-4">
+  <div class="max-w-3xl mx-auto bg-white p-4 rounded shadow">
+    <h1 class="text-2xl font-bold mb-4">Kuiz BIG 5%</h1>
+    <p class="mb-2">Masa tinggal: <span id="timer">20:00</span></p>
+    <label class="block mb-4">
+      <input type="checkbox" id="honourCode"> Saya mengaku akan menjawab dengan jujur.
+    </label>
+    <div id="soalanContainer" class="space-y-4 mb-4"></div>
+    <button id="submitBtn" onclick="submitKuiz()" disabled class="bg-blue-500 text-white px-4 py-2 rounded">Hantar Jawapan</button>
+  </div>
+<script src="script.js"></script>
+</body>
+</html>
