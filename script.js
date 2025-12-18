@@ -1,27 +1,42 @@
+// ============================
+// CONFIGURATION
+// ============================
+const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwf0gtA5sV4oIMM53baae9t9WKXDgVUGtAaqU-e0No2x69r_bosnJ0yGJ-89IQ_mCI9/exec';
 let soalanList = [];
-let pelajarId = 'MPU3411_001'; // Boleh auto assign
+let pelajarId = 'MPU3411_001'; // Gantikan dengan ID pelajar sebenar
 let jawapanUser = [];
 let duration = 20*60; // 20 minit
 let timer;
 
+// ============================
+// INIT ON LOAD
+// ============================
 window.onload = () => {
+  // Enable submit button selepas pelajar tanda akuan
   document.getElementById('honourCode').addEventListener('change', e => {
     document.getElementById('submitBtn').disabled = !e.target.checked;
   });
   loadSoalan();
 };
 
-// Load soalan dari Apps Script
+// ============================
+// LOAD SOALAN DARI APPS SCRIPT
+// ============================
 function loadSoalan() {
-  google.script.run.withSuccessHandler(data => {
-    soalanList = data;
-    renderSoalan();
-    startTimer();
-    enterFullscreen();
-  }).getSoalan();
+  fetch(`${WEBAPP_URL}?action=getSoalan`)
+    .then(response => response.json())
+    .then(data => {
+      soalanList = data;
+      renderSoalan();
+      startTimer();
+      enterFullscreen();
+    })
+    .catch(err => console.error(err));
 }
 
-// Render soalan
+// ============================
+// RENDER SOALAN KE HTML
+// ============================
 function renderSoalan() {
   const container = document.getElementById('soalanContainer');
   container.innerHTML = '';
@@ -36,7 +51,9 @@ function renderSoalan() {
   });
 }
 
-// Timer 20 minit
+// ============================
+// TIMER 20 MINIT
+// ============================
 function startTimer() {
   timer = setInterval(()=>{
     let min = Math.floor(duration/60);
@@ -50,7 +67,9 @@ function startTimer() {
   },1000);
 }
 
-// Submit jawapan
+// ============================
+// AUTO-SUBMIT JAWAPAN
+// ============================
 function submitKuiz() {
   jawapanUser = soalanList.map(q => {
     let radios = document.getElementsByName('soalan_' + q.id);
@@ -59,18 +78,42 @@ function submitKuiz() {
     return {id: q.id, jawapanUser: jaw, jawapan: q.jawapan};
   });
 
-  google.script.run.withSuccessHandler(result=>{
+  fetch(WEBAPP_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'simpanJawapan',
+      pelajarId: pelajarId,
+      jawapanArray: jawapanUser
+    }),
+    headers: { 'Content-Type': 'application/json' }
+  })
+  .then(res => res.json())
+  .then(result => {
     alert(`Kuiz tamat! Markah: ${result.markah} / ${result.total}`);
     location.reload();
-  }).simpanJawapan(pelajarId, jawapanUser);
+  })
+  .catch(err => console.error(err));
 }
 
-// Anti-tab / minimize
+// ============================
+// ANTI-TAB / MINIMIZE DETECTION
+// ============================
 window.onblur = () => {
-  google.script.run.logEvent(pelajarId,'Tab keluar / minimize','Pelajar tinggalkan halaman');
+  fetch(WEBAPP_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'logEvent',
+      pelajarId: pelajarId,
+      event: 'Tab keluar / minimize',
+      nota: 'Pelajar tinggalkan halaman'
+    }),
+    headers: { 'Content-Type': 'application/json' }
+  });
 };
 
-// Fullscreen paksa pelajar
+// ============================
+// FORCE FULLSCREEN
+// ============================
 function enterFullscreen() {
   const el = document.documentElement;
   if(el.requestFullscreen) el.requestFullscreen();
