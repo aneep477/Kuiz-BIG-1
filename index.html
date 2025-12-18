@@ -1,23 +1,436 @@
-
 <!DOCTYPE html>
 <html lang="ms">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kuiz BIG 5%</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kuiz Program BIG - Penilaian I</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        /* Animasi Loading */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Halang Copy Paste */
+        body { user-select: none; -webkit-user-select: none; }
+    </style>
 </head>
-<body class="bg-gray-100 p-4">
-  <div class="max-w-3xl mx-auto bg-white p-4 rounded shadow">
-    <h1 class="text-2xl font-bold mb-4">Kuiz BIG 5%</h1>
-    <p class="mb-2">Masa tinggal: <span id="timer">20:00</span></p>
-    <label class="block mb-4">
-      <input type="checkbox" id="honourCode"> Saya mengaku akan menjawab dengan jujur.
-    </label>
-    <div id="soalanContainer" class="space-y-4 mb-4"></div>
-    <button id="submitBtn" onclick="submitKuiz()" disabled class="bg-blue-500 text-white px-4 py-2 rounded">Hantar Jawapan</button>
-  </div>
-<script src="script.js"></script>
+<body class="bg-gray-100 min-h-screen font-sans text-gray-800">
+
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycbwf0gtA5sV4oIMM53baae9t9WKXDgVUGtAaqU-e0No2x69r_bosnJ0yGJ-89IQ_mCI9/exec";
+    </script>
+
+    <div id="view-login" class="flex items-center justify-center min-h-screen px-4">
+        <div class="bg-white p-8 rounded-xl shadow-lg max-w-md w-full text-center">
+            <h1 class="text-2xl font-bold text-blue-800 mb-2">Program BIG</h1>
+            <p class="text-gray-500 mb-6">Sistem Kuiz Dalam Talian (5%)</p>
+            
+            <div class="mb-4 text-left">
+                <label class="block text-sm font-medium text-gray-700 mb-1">No. Kad Pengenalan</label>
+                <input type="text" id="input-ic" placeholder="Contoh: 010101010101" 
+                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    onkeypress="handleEnter(event)">
+            </div>
+
+            <button onclick="loginUser()" id="btn-login" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200">
+                Masuk
+            </button>
+            <p class="text-xs text-gray-400 mt-4">Pastikan sambungan internet stabil.</p>
+        </div>
+    </div>
+
+    <div id="view-rules" class="hidden min-h-screen flex items-center justify-center px-4 bg-gray-50">
+        <div class="bg-white p-6 rounded-xl shadow-lg max-w-lg w-full">
+            <h2 class="text-xl font-bold text-red-600 mb-4"><i class="fas fa-exclamation-triangle"></i> PERHATIAN PENTING</h2>
+            <ul class="list-disc pl-5 space-y-2 text-sm text-gray-700 mb-6">
+                <li>Masa menjawab adalah <strong>20 Minit</strong>.</li>
+                <li>Sila jawab semua <strong>30 Soalan</strong>.</li>
+                <li><strong>DILARANG</strong> menukar tab, membuka aplikasi lain, atau mengecilkan (minimize) pelayar.</li>
+                <li>Sistem akan merekod sebarang percubaan keluar sebagai <strong>Pelanggaran Integriti</strong>.</li>
+                <li>Jawapan akan dihantar secara automatik jika masa tamat.</li>
+            </ul>
+            <div class="flex items-center mb-4">
+                <input type="checkbox" id="agree-check" class="w-5 h-5 text-blue-600">
+                <label for="agree-check" class="ml-2 text-sm">Saya faham dan bersedia mematuhi peraturan.</label>
+            </div>
+            <button onclick="startQuiz()" id="btn-start" disabled class="w-full bg-gray-400 text-white font-bold py-2 px-4 rounded-lg cursor-not-allowed">
+                Mula Menjawab
+            </button>
+        </div>
+    </div>
+
+    <div id="view-quiz" class="hidden min-h-screen flex flex-col">
+        <div class="bg-white shadow-md p-4 sticky top-0 z-50 flex justify-between items-center">
+            <div>
+                <p class="text-xs text-gray-500">Calon:</p>
+                <p class="font-bold text-sm truncate w-32 md:w-auto" id="display-name">Nama Pelajar</p>
+            </div>
+            <div class="text-center">
+                <div class="text-xs text-gray-500">Baki Masa</div>
+                <div id="timer-display" class="text-xl font-mono font-bold text-blue-600">20:00</div>
+            </div>
+            <button onclick="confirmSubmit()" class="bg-green-600 text-white text-xs px-3 py-2 rounded shadow hover:bg-green-700">
+                Hantar
+            </button>
+        </div>
+
+        <div class="flex-grow p-4 md:p-8 max-w-4xl mx-auto w-full">
+            <div class="bg-white rounded-lg shadow p-6 min-h-[300px]">
+                <div class="flex justify-between mb-4">
+                    <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">Soalan <span id="q-number">1</span> / 30</span>
+                </div>
+                <h3 class="text-lg font-medium mb-6" id="q-text">Sedang memuatkan soalan...</h3>
+                
+                <div class="space-y-3" id="options-container">
+                    </div>
+            </div>
+        </div>
+
+        <div class="bg-gray-50 p-4 border-t sticky bottom-0">
+            <div class="flex justify-between max-w-4xl mx-auto">
+                <button onclick="prevQ()" id="btn-prev" class="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 disabled:opacity-50">
+                    <i class="fas fa-chevron-left"></i> Sebelum
+                </button>
+                <button onclick="nextQ()" id="btn-next" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                    Seterusnya <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+            <div class="flex space-x-2 overflow-x-auto mt-4 pb-2 max-w-4xl mx-auto" id="palette-container">
+                </div>
+        </div>
+    </div>
+
+    <div id="loader-overlay" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center">
+        <div class="bg-white p-5 rounded-lg flex flex-col items-center">
+            <div class="loader mb-3"></div>
+            <p class="text-sm font-semibold text-gray-600" id="loader-text">Memproses...</p>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA NEGERI (STATE) ---
+        let currentUser = {};
+        let questions = [];
+        let userAnswers = {}; // Format: { "q_id": "A", "q_id2": "B" }
+        let currentQIndex = 0;
+        let timerInterval;
+        let timeLeft = 20 * 60; // 20 Minit dalam saat
+        let violationCount = 0;
+
+        // --- DOM ELEMENTS ---
+        const views = {
+            login: document.getElementById('view-login'),
+            rules: document.getElementById('view-rules'),
+            quiz: document.getElementById('view-quiz')
+        };
+        
+        // --- FUNGSI UTILITI ---
+        function showView(viewName) {
+            Object.values(views).forEach(el => el.classList.add('hidden'));
+            views[viewName].classList.remove('hidden');
+        }
+
+        function showLoader(show, text = "Memproses...") {
+            const el = document.getElementById('loader-overlay');
+            document.getElementById('loader-text').innerText = text;
+            if (show) el.classList.remove('hidden');
+            else el.classList.add('hidden');
+        }
+
+        function handleEnter(e) {
+            if (e.key === 'Enter') loginUser();
+        }
+
+        // --- 1. LOGIN USER ---
+        function loginUser() {
+            const ic = document.getElementById('input-ic').value.trim();
+            if (!ic) return Swal.fire('Ralat', 'Sila masukkan No. Kad Pengenalan', 'error');
+
+            showLoader(true, "Menyemak Data...");
+
+            // Panggil API Backend (Action: login)
+            fetch(`${API_URL}?action=login&no_kp=${ic}`)
+                .then(res => res.json())
+                .then(data => {
+                    showLoader(false);
+                    if (data.status === 'success') {
+                        currentUser = data;
+                        document.getElementById('display-name').innerText = data.nama;
+                        // Pre-load soalan
+                        loadQuestions();
+                    } else if (data.status === 'done') {
+                        Swal.fire('Selesai', `Maaf ${data.nama}, anda telah menjawab kuiz ini.`, 'info');
+                    } else {
+                        Swal.fire('Gagal', data.message || 'ID tidak ditemui', 'error');
+                    }
+                })
+                .catch(err => {
+                    showLoader(false);
+                    Swal.fire('Ralat', 'Masalah sambungan server', 'error');
+                });
+        }
+
+        // --- 2. LOAD SOALAN ---
+        function loadQuestions() {
+            showLoader(true, "Memuat turun Bank Soalan...");
+            fetch(`${API_URL}?action=getQuestions`)
+                .then(res => res.json())
+                .then(data => {
+                    showLoader(false);
+                    questions = data;
+                    if (questions.length > 0) {
+                        showView('rules'); // Tunjuk Rules lepas data ready
+                    } else {
+                        Swal.fire('Ralat', 'Tiada soalan ditemui dalam database', 'warning');
+                    }
+                });
+        }
+
+        // Enable butang mula bila checkbox tick
+        document.getElementById('agree-check').addEventListener('change', function() {
+            const btn = document.getElementById('btn-start');
+            if (this.checked) {
+                btn.disabled = false;
+                btn.classList.remove('bg-gray-400', 'cursor-not-allowed');
+                btn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+            } else {
+                btn.disabled = true;
+                btn.classList.add('bg-gray-400', 'cursor-not-allowed');
+                btn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+            }
+        });
+
+        // --- 3. MULA KUIZ ---
+        function startQuiz() {
+            // Minta Fullscreen
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) { elem.requestFullscreen().catch(err => {}); }
+
+            showView('quiz');
+            startTimer();
+            startSecurityMonitor();
+            renderQuestion();
+            renderPalette();
+        }
+
+        // --- 4. RENDER SOALAN ---
+        function renderQuestion() {
+            const q = questions[currentQIndex];
+            document.getElementById('q-number').innerText = currentQIndex + 1;
+            document.getElementById('q-text').innerText = q.soalan;
+            
+            const container = document.getElementById('options-container');
+            container.innerHTML = ''; // Clear lama
+
+            const labels = {A: q.options.A, B: q.options.B, C: q.options.C, D: q.options.D};
+            
+            Object.keys(labels).forEach(key => {
+                const isSelected = userAnswers[q.id] === key;
+                const cssClass = isSelected 
+                    ? "bg-blue-100 border-blue-500 ring-1 ring-blue-500" 
+                    : "bg-white border-gray-200 hover:bg-gray-50";
+
+                const html = `
+                <div onclick="selectOption('${q.id}', '${key}')" 
+                     class="cursor-pointer border rounded-lg p-3 flex items-center transition ${cssClass}">
+                    <div class="flex-shrink-0 h-8 w-8 rounded-full border flex items-center justify-center mr-3 ${isSelected ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}">
+                        ${key}
+                    </div>
+                    <span class="text-sm">${labels[key]}</span>
+                </div>`;
+                container.insertAdjacentHTML('beforeend', html);
+            });
+
+            // Update butang navigation
+            document.getElementById('btn-prev').disabled = currentQIndex === 0;
+            document.getElementById('btn-next').innerHTML = currentQIndex === questions.length - 1 
+                ? 'Semak Semua <i class="fas fa-list"></i>' 
+                : 'Seterusnya <i class="fas fa-chevron-right"></i>';
+
+            updatePaletteHighlight();
+        }
+
+        function selectOption(qid, ans) {
+            userAnswers[qid] = ans;
+            renderQuestion(); // Re-render untuk update UI
+            renderPalette(); // Update warna nombor di bawah
+        }
+
+        function nextQ() {
+            if (currentQIndex < questions.length - 1) {
+                currentQIndex++;
+                renderQuestion();
+            } else {
+                // Jika soalan akhir, scroll ke palette untuk semakan
+                document.getElementById('palette-container').scrollIntoView({behavior: "smooth"});
+                Swal.fire({
+                    title: 'Semak Jawapan',
+                    text: 'Anda telah sampai ke soalan terakhir. Sila semak palette di bawah untuk memastikan semua dijawab sebelum hantar.',
+                    icon: 'info'
+                });
+            }
+        }
+
+        function prevQ() {
+            if (currentQIndex > 0) {
+                currentQIndex--;
+                renderQuestion();
+            }
+        }
+
+        // --- 5. PALETTE NAVIGASI ---
+        function renderPalette() {
+            const container = document.getElementById('palette-container');
+            container.innerHTML = '';
+            
+            questions.forEach((q, idx) => {
+                const answered = userAnswers[q.id] ? true : false;
+                const btn = document.createElement('button');
+                btn.className = `flex-shrink-0 w-8 h-8 rounded text-xs font-bold ${answered ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}`;
+                btn.innerText = idx + 1;
+                btn.onclick = () => {
+                    currentQIndex = idx;
+                    renderQuestion();
+                };
+                container.appendChild(btn);
+            });
+            updatePaletteHighlight();
+        }
+        
+        function updatePaletteHighlight() {
+            const btns = document.getElementById('palette-container').children;
+            for (let i = 0; i < btns.length; i++) {
+                if (i === currentQIndex) btns[i].classList.add('ring-2', 'ring-offset-1', 'ring-blue-500');
+                else btns[i].classList.remove('ring-2', 'ring-offset-1', 'ring-blue-500');
+            }
+        }
+
+        // --- 6. TIMER ---
+        function startTimer() {
+            const display = document.getElementById('timer-display');
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                
+                const m = Math.floor(timeLeft / 60);
+                const s = timeLeft % 60;
+                display.innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                
+                if (timeLeft < 300) display.classList.add('text-red-600'); // Merah bila < 5 min
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    submitQuiz(true); // Force submit
+                }
+            }, 1000);
+        }
+
+        // --- 7. KESELAMATAN (ANTI-CHEAT) ---
+        function startSecurityMonitor() {
+            document.addEventListener("visibilitychange", () => {
+                if (document.visibilityState === 'hidden') {
+                    violationCount++;
+                    
+                    // Log senyap ke backend
+                    fetch(API_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            action: 'log',
+                            id_sistem: currentUser.id_sistem,
+                            isu: 'Tab Switch / Minimize',
+                            catatan: `Pelanggaran kali ke-${violationCount}`,
+                            device: navigator.userAgent
+                        })
+                    });
+
+                    Swal.fire({
+                        title: 'AMARAN INTEGRITI!',
+                        html: `Sistem mengesan anda meninggalkan paparan ujian.<br>Kesalahan: <b>${violationCount}</b><br>Tindakan ini telah direkodkan.`,
+                        icon: 'warning',
+                        confirmButtonColor: '#d33',
+                        confirmButtonText: 'Saya Faham'
+                    });
+                }
+            });
+        }
+
+        // --- 8. HANTAR (SUBMIT) ---
+        function confirmSubmit() {
+            const totalQ = questions.length;
+            const answeredQ = Object.keys(userAnswers).length;
+            
+            Swal.fire({
+                title: 'Hantar Jawapan?',
+                text: `Anda telah menjawab ${answeredQ} daripada ${totalQ} soalan.`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Hantar',
+                cancelButtonText: 'Semak Semula'
+            }).then((result) => {
+                if (result.isConfirmed) submitQuiz(false);
+            });
+        }
+
+        function submitQuiz(forced) {
+            clearInterval(timerInterval);
+            showLoader(true, forced ? "Masa Tamat! Menghantar..." : "Menghantar Jawapan...");
+
+            // 1. Kira Markah (Client Side untuk display, Server side verify)
+            // Nota: Untuk keselamatan maksimum, pengiraan sebenar patut di server.
+            // Di sini kita kira anggaran sahaja sebab kita tak simpan jawapan betul dalam variable 'questions' (lihat kod backend)
+            // Jadi kita hantar jawapan pelajar ke server untuk dikira.
+            
+            const payload = {
+                action: 'submit',
+                id_sistem: currentUser.id_sistem,
+                jawapan_obj: userAnswers,
+                markah: 0 // Server akan kira semula atau update kemudian (Di backend V2 tadi saya set terima markah, tapi lebih baik server kira)
+            };
+
+            // Hack: Memandangkan backend V2 tadi terima markah dari client, 
+            // kita perlu ubah backend sikit untuk kira markah ATAU kita hantar markah kosong dulu.
+            // TAPI, sebab user kata "Auto markah", saya akan buat pengiraan asas di sini
+            // jika backend hantar jawapan betul. 
+            // Tadi di backend V2, saya komen "questions.push({ ... ans: rows[i][6] })".
+            // Jadi Frontend tak tahu jawapan betul. Ini BAGUS untuk keselamatan.
+            // MAKA: Kita hantar markah "Pending" dan suruh Server kira.
+            // Sila pastikan Backend dikemaskini untuk kira markah, ATAU 
+            // buat masa ini saya hantar "0" dan kita akan buat server calculation step seterusnya.
+            
+            // JIKA NAK MARKAH DIKIRA, kita kena update Backend. 
+            // Untuk langkah ini, kita hantar data dulu.
+
+            fetch(API_URL, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                showLoader(false);
+                Swal.fire({
+                    title: 'Berjaya!',
+                    text: 'Jawapan anda telah direkodkan. Terima kasih.',
+                    icon: 'success',
+                    allowOutsideClick: false
+                }).then(() => {
+                    location.reload(); // Reset laman
+                });
+            })
+            .catch(err => {
+                showLoader(false);
+                Swal.fire('Ralat', 'Gagal menyimpan jawapan. Sila screenshot skrin ini dan hantar kepada urusetia.', 'error');
+            });
+        }
+    </script>
 </body>
 </html>
